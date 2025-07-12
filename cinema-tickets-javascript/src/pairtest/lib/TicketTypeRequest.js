@@ -3,9 +3,11 @@
  */
 
 export default class TicketTypeRequest {
-  #type;
 
+  /* Private fields */
+  #type;
   #noOfTickets;
+  #Type = ['ADULT', 'CHILD', 'INFANT'];
 
   constructor(type, noOfTickets) {
     if (!this.#Type.includes(type)) {
@@ -27,6 +29,4 @@ export default class TicketTypeRequest {
   getTicketType() {
     return this.#type;
   }
-
-  #Type = ['ADULT', 'CHILD', 'INFANT'];
 }

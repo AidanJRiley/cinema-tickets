@@ -7,6 +7,14 @@
   },
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run **/*.spec.js",
+    "test:watch": "vitest --watch **/*.spec.js",
+    "test:coverage": "vitest run --coverage"
   },
+  "dependencies": {
+    "vitest": "^3.2.4"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4"
+  }
 }
