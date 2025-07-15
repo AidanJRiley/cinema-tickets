@@ -1,21 +1,23 @@
 /**
  * Immutable Object.
  */
+import { getValidTicketTypes } from "../constants/ticketTypes.js";
 
 export default class TicketTypeRequest {
-
   /* Private fields */
   #type;
   #noOfTickets;
-  #Type = ['ADULT', 'CHILD', 'INFANT'];
+  #Type = getValidTicketTypes();
 
   constructor(type, noOfTickets) {
     if (!this.#Type.includes(type)) {
-      throw new TypeError(`type must be ${this.#Type.slice(0, -1).join(', ')}, or ${this.#Type.slice(-1)}`);
+      throw new TypeError(
+        `type must be ${this.#Type.slice(0, -1).join(", ")}, or ${this.#Type.slice(-1)}`,
+      );
     }
 
     if (!Number.isInteger(noOfTickets)) {
-      throw new TypeError('noOfTickets must be an integer');
+      throw new TypeError("noOfTickets must be an integer");
     }
 
     this.#type = type;
