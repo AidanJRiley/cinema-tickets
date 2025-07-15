@@ -25,6 +25,8 @@ describe("ticketTypes price definitions", () => {
 
   it("includes exactly only the valid ticket types", () => {
     const validTicketTypes = getValidTicketTypes();
+
+    // Set explicitly to ensure the validTicketTypes is not updated in error
     expect(validTicketTypes).toHaveLength(3);
   });
 });
