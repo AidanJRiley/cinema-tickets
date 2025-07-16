@@ -12,6 +12,7 @@ A Node.js service for purchasing cinema tickets, including business rule validat
 - [Testing](#testing)
 - [Logging](#logging)
 - [Linting](#linting)
+- [Next Steps](#next-steps)
 
 ---
 ## Requirements
@@ -130,3 +131,13 @@ This project uses ESLint with recommended JavaScript rules.
 Config file can be found here: `eslint.config.js`
 
 linting can be run with: `npm run lint`
+
+---
+## Next Steps
+
+The next steps for this project could include:
+- Database integration: store purchases, account information, seating.
+- Implement the application as a RESTful service using Express as a server and implementing a Post endpoint.
+- As the various schemas become more complicated, consider implementing validation through a validation library such as Zod.
+
+---
