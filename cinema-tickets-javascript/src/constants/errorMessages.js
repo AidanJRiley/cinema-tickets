@@ -19,6 +19,6 @@ export const ERROR_MESSAGES = {
   NO_OF_TICKETS_INTEGER: "noOfTickets must be an integer",
 
   // Payment request
-  PRICE_MUST_BE_INTEGER: "PRICE_MUST_BE_INTEGER",
+  PRICE_MUST_BE_INTEGER: "Ticket price must be an integer",
   TOTAL_PRICE_MUST_BE_INTEGER: "The total price must be an integer",
 };
