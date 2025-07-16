@@ -4,19 +4,25 @@ A Node.js service for purchasing cinema tickets, including business rule validat
 
 ## Table of Contents
 
+- [Requirements](#requirements)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Configuration](#configuration)
+- [Constants](#constants)
 - [Testing](#testing)
 - [Logging](#logging)
 
+---
+## Requirements
+
+- Node.js >= 20.9.0
 ---
 
 ## Installation
 
 ```bash
 git clone https://github.com/yourname/ticketing-service.git
-cd ticketing-service
+cd cinema-tickets/cinema-tickets-javascript
 npm install
 ```
 
@@ -33,11 +39,17 @@ node app.js
 Example usage in code:
 
 ```js
-import TicketService from './src/pairtest/TicketService.js';
-import TicketTypeRequest from './src/pairtest/lib/TicketTypeRequest.js';
+import TicketService from './TicketService.js';
+import TicketTypeRequest from './TicketTypeRequest.js';
 
 const service = new TicketService();
-service.purchaseTickets(1, new TicketTypeRequest('ADULT', 2));
+const accountId = 1
+service.purchaseTickets(
+    accountId, 
+    new TicketTypeRequest('ADULT', 3),
+    new TicketTypeRequest('CHILD', 2),
+    new TicketTypeRequest('INFANT', 1)
+);
 ```
 
 ---
@@ -50,13 +62,24 @@ Create a `.env` file in the root directory:
 LOG_LEVEL=debug
 ```
 
-You can adjust the log level as needed.
-
-Supported values:
+You can adjust the log level as needed, using the following values:
 - `error`
 - `warn`
 - `info`
 - `debug`
+
+It defaults to 'info' if no LOG_LEVEL is set.
+
+---
+## Constants
+
+Business rules and ticket configurations are defined in `src/constants/`:
+
+- `ticketTypes.js`: Defines ticket types, their prices,  whether a seat is required, and if the ticket type is valid.
+- `rules.js`: Defines constraints like the maximum number of tickets per purchase.
+- `errorMessages.js`:  Error messages used throughout validation logic.
+
+These constants can be modified to update pricing, add new ticket types, or adjust validation error messages.
 
 ---
 
