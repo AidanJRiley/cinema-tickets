@@ -345,4 +345,19 @@ describe("TicketService purchaseTickets correctly applies business rules", () =>
     expect(result).toThrow(InvalidPurchaseException);
     expect(result).toThrow(ERROR_MESSAGES.TICKET_TYPE_ALREADY_PROCESSED);
   });
+  it("throws an InvalidPurchaseException if the total price is not an integer", () => {
+    const originalPrice = ticketTypes.ADULT.price;
+    ticketTypes.ADULT.price = 12.5;
+
+    const result = () =>
+      ticketService.purchaseTickets(
+        accountId,
+        new TicketTypeRequest("ADULT", 1),
+      );
+
+    expect(result).toThrow(InvalidPurchaseException);
+    expect(result).toThrow(ERROR_MESSAGES.PRICE_MUST_BE_INTEGER);
+
+    ticketTypes.ADULT.price = originalPrice; // Reset after test
+  });
 });

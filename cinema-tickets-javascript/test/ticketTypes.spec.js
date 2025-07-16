@@ -1,4 +1,4 @@
-import { it, describe, expect } from "vitest";
+import { it, describe, expect, test } from "vitest";
 import {
   getValidTicketTypes,
   ticketTypes,
@@ -28,6 +28,15 @@ describe("ticketTypes price definitions", () => {
 
     // Set explicitly to ensure the validTicketTypes is not updated in error
     expect(validTicketTypes).toHaveLength(3);
+  });
+
+  it("only allows integer prices", () => {
+    const validTicketTypes = getValidTicketTypes();
+
+    validTicketTypes.filter((ticketType) => {
+      const price = ticketTypes[ticketType].price;
+      expect(Number.isInteger(price)).toBe(true);
+    });
   });
 });
 

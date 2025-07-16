@@ -1,3 +1,4 @@
+// ticket prices must be an integer
 export const ticketTypes = {
   ADULT: { price: 25, seatRequired: true, isValid: true },
   CHILD: { price: 15, seatRequired: true, isValid: true },
