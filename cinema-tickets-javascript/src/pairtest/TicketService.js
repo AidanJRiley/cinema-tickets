@@ -141,6 +141,10 @@ export default class TicketService {
       price += totalTickets[key] * ticketTypes[key].price;
     });
 
+    if (!Number.isInteger(price)) {
+      throw new InvalidPurchaseException(ERROR_MESSAGES.PRICE_MUST_BE_INTEGER);
+    }
+
     return price;
   }
 
