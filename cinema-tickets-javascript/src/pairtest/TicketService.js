@@ -16,16 +16,19 @@ export default class TicketService {
       "purchaseTickets: attempting to purchase tickets for account " +
         accountId,
     );
+
     if (!this.#isAccountValid(accountId)) {
       throw new InvalidPurchaseException(ERROR_MESSAGES.INVALID_ACCOUNT_ID);
     }
 
-    const ticketTypeCounts = this.#processTicketRequests(ticketTypeRequests);
+    const ticketTypeCounts =
+      this.#validateTicketRequestsAndGetCount(ticketTypeRequests);
 
     this.#validateBusinessRules(ticketTypeCounts);
 
-    const totalSeatsRequired = this.#getNumberOfSeatsRequired(ticketTypeCounts);
-    const totalPrice = this.#getTotalPrice(ticketTypeCounts);
+    const totalSeatsRequired =
+      this.#calculateNumberOfSeatsRequired(ticketTypeCounts);
+    const totalPrice = this.#calculateTotalPrice(ticketTypeCounts);
 
     try {
       new SeatReservationService().reserveSeat(accountId, totalSeatsRequired);
@@ -46,38 +49,45 @@ export default class TicketService {
     return isValid;
   }
 
-  #processTicketRequests(ticketRequests) {
-    logger.debug("processTicketRequests: processing ticket requests");
+  #validateTicketRequestsAndGetCount(ticketRequests) {
+    logger.debug(
+      "validateTicketRequestsAndGetCount: processing ticket requests",
+    );
     const processedTicketTypes = new Set();
-    const count = this.#getCountFromValidTicketTypes();
+    const count = this.#initialiseCountFromValidTicketTypes();
 
     ticketRequests.forEach((ticketRequest) => {
+      this.#validateTicketRequest(ticketRequest, processedTicketTypes);
       const ticketType = ticketRequest.getTicketType();
-      const numberOfTickets = ticketRequest.getNoOfTickets();
-
-      if (!ticketTypes[ticketType]) {
-        throw new InvalidPurchaseException(
-          ERROR_MESSAGES.INVALID_TICKET_TYPE(ticketType),
-        );
-      }
-
-      if (processedTicketTypes.has(ticketType)) {
-        throw new InvalidPurchaseException(
-          ERROR_MESSAGES.TICKET_TYPE_ALREADY_PROCESSED,
-        );
-      }
-
-      if (numberOfTickets < 1) {
-        throw new InvalidPurchaseException(
-          ERROR_MESSAGES.TICKET_COUNT_MUST_BE_POSITIVE,
-        );
-      }
-
-      count[ticketType] = numberOfTickets;
+      count[ticketType] = ticketRequest.getNoOfTickets();
       processedTicketTypes.add(ticketType);
     });
 
     return count;
+  }
+
+  #validateTicketRequest(ticketRequest, processedTicketTypes) {
+    logger.debug("validateTicketRequest: validating ticket request");
+    const ticketType = ticketRequest.getTicketType();
+    const numberOfTickets = ticketRequest.getNoOfTickets();
+
+    if (!ticketTypes[ticketType]) {
+      throw new InvalidPurchaseException(
+        ERROR_MESSAGES.INVALID_TICKET_TYPE(ticketType),
+      );
+    }
+
+    if (processedTicketTypes.has(ticketType)) {
+      throw new InvalidPurchaseException(
+        ERROR_MESSAGES.TICKET_TYPE_ALREADY_PROCESSED,
+      );
+    }
+
+    if (numberOfTickets < 1) {
+      throw new InvalidPurchaseException(
+        ERROR_MESSAGES.TICKET_COUNT_MUST_BE_POSITIVE,
+      );
+    }
   }
 
   #validateBusinessRules(counts) {
@@ -99,15 +109,15 @@ export default class TicketService {
     }
 
     // Maximum number of tickets that can be requested at once
-    const total = this.#getTotalTicketCount(counts);
+    const total = this.#calculateTotalTicketCount(counts);
     if (total > MAX_TICKETS_PER_PURCHASE) {
       throw new InvalidPurchaseException(ERROR_MESSAGES.MAX_TICKETS_EXCEEDED);
     }
   }
 
-  #getNumberOfSeatsRequired(totalTickets) {
+  #calculateNumberOfSeatsRequired(totalTickets) {
     logger.debug(
-      `getNumberOfSeatsRequired: calculating total number of seats required`,
+      `calculateNumberOfSeatsRequired: calculating total number of seats required`,
     );
     let seats = 0;
     Object.entries(totalTickets).forEach(([key, value]) => {
@@ -117,13 +127,15 @@ export default class TicketService {
     return seats;
   }
 
-  #getTotalTicketCount(counts) {
-    logger.debug(`getTotalTicketCount: getting total tickets for requests`);
+  #calculateTotalTicketCount(counts) {
+    logger.debug(
+      `calculateTotalTicketCount: getting total tickets for requests`,
+    );
     return Object.values(counts).reduce((sum, val) => sum + val, 0);
   }
 
-  #getTotalPrice(totalTickets) {
-    logger.debug(`getTotalPrice: calculating the total price`);
+  #calculateTotalPrice(totalTickets) {
+    logger.debug(`calculateTotalPrice: calculating the total price`);
     let price = 0;
     Object.keys(totalTickets).forEach((key) => {
       price += totalTickets[key] * ticketTypes[key].price;
@@ -132,9 +144,9 @@ export default class TicketService {
     return price;
   }
 
-  #getCountFromValidTicketTypes() {
+  #initialiseCountFromValidTicketTypes() {
     logger.debug(
-      "getCountFromValidTicketTypes: getting ticket type count for valid tickets",
+      "initialiseCountFromValidTicketTypes: getting ticket type count for valid tickets",
     );
     return Object.fromEntries(
       Object.keys(ticketTypes)
@@ -146,7 +158,7 @@ export default class TicketService {
   #logPurchaseSummary(ticketTypeCounts, totalSeatsRequired, totalPrice) {
     logger.info(`logPurchaseSummary
       Purchase Successful
-      Number of Tickets: ${this.#getTotalTicketCount(ticketTypeCounts)}
+      Number of Tickets: ${this.#calculateTotalTicketCount(ticketTypeCounts)}
       Number of Seats Reserved: ${totalSeatsRequired}
       Total Price: £${totalPrice.toFixed(2)}`);
   }

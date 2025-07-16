@@ -97,6 +97,8 @@ Check test coverage:
 npm run test:coverage
 ```
 
+Current test coverage is 87.12% for the project, with all files containing business logic at 100% test coverage.
+
 Vitest setup and config files
 - config: `vitest.config.js`
 - setup: `vitest.setup.js`
