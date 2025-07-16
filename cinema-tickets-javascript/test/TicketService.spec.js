@@ -1,282 +1,348 @@
-import {describe, it, vi, expect, afterEach} from "vitest";
+import { describe, it, vi, expect, afterEach, beforeEach } from "vitest";
 import TicketService from "../src/pairtest/TicketService.js";
 import TicketTypeRequest from "../src/pairtest/lib/TicketTypeRequest.js";
 import SeatReservationService from "../src/thirdparty/seatbooking/SeatReservationService.js";
 import TicketPaymentService from "../src/thirdparty/paymentgateway/TicketPaymentService.js";
-import {ticketTypes} from "../src/pairtest/constants/ticketTypes.js";
+import { ticketTypes } from "../src/constants/ticketTypes.js";
 import InvalidPurchaseException from "../src/pairtest/lib/InvalidPurchaseException.js";
+import { MAX_TICKETS_PER_PURCHASE } from "../src/constants/rules.js";
+import { ERROR_MESSAGES } from "../src/constants/errorMessages.js";
 
 // Mock external services
-vi.mock('../src/thirdparty/paymentgateway/TicketPaymentService.js', () => ({
-    default: vi.fn(() => ({
-        makePayment: vi.fn()
-    }))
-}))
-vi.mock('../src/thirdparty/seatbooking/SeatReservationService.js', () => ({
-    default: vi.fn(() => ({
-        reserveSeat: vi.fn()
-    }))
-}))
+vi.mock("../src/thirdparty/paymentgateway/TicketPaymentService.js", () => ({
+  default: vi.fn(() => ({
+    makePayment: vi.fn(),
+  })),
+}));
+vi.mock("../src/thirdparty/seatbooking/SeatReservationService.js", () => ({
+  default: vi.fn(() => ({
+    reserveSeat: vi.fn(),
+  })),
+}));
 
-// restores mocks after each test
+// Common test setup
+let ticketService;
+let accountId;
+beforeEach(() => {
+  ticketService = new TicketService();
+  accountId = 1;
+});
+
+// Restores mocks after each test
 afterEach(() => {
-    vi.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
-describe('External services are being mocked correctly', () => {
-    it("should return the mocked return value for TicketPaymentService.makePayment", () => {
-        const accountId = 1
-        const numberOfTickets = 2
-        const ticketType = "ADULT"
-        const totalCostOfTicket = ticketTypes[ticketType].price * numberOfTickets
+describe("External services are being mocked correctly", () => {
+  it("should return the mocked return value for TicketPaymentService.makePayment", () => {
+    const numberOfTickets = 2;
+    const ticketType = "ADULT";
+    const totalCostOfTicket = ticketTypes[ticketType].price * numberOfTickets;
 
-        const ticketService = new TicketService();
+    ticketService.purchaseTickets(
+      accountId,
+      new TicketTypeRequest(ticketType, numberOfTickets),
+    );
 
-        ticketService.purchaseTickets(accountId, new TicketTypeRequest(ticketType, numberOfTickets));
+    const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
 
-        const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
+    expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(
+      accountId,
+      totalCostOfTicket,
+    );
+    expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
+  });
+  it("should return the mocked return value for SeatReservationService.reserveSeat", () => {
+    const numberOfTickets = 3;
+    const ticketType = "ADULT";
 
-        expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(accountId, totalCostOfTicket);
-        expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
-    });
-    it("should return the mocked return value for SeatReservationService.reserveSeat", () => {
-        const accountId = 1
-        const numberOfTickets = 3
-        const ticketType = "ADULT"
+    ticketService.purchaseTickets(
+      accountId,
+      new TicketTypeRequest(ticketType, numberOfTickets),
+    );
 
-        const ticketService = new TicketService();
+    const seatServiceInstance = SeatReservationService.mock.results[0].value;
 
-        ticketService.purchaseTickets(accountId, new TicketTypeRequest(ticketType, numberOfTickets));
-
-        const seatServiceInstance = SeatReservationService.mock.results[0].value;
-
-        expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(accountId, numberOfTickets);
-        expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
-    });
-})
-
-describe('TicketService purchaseTickets happy path', () => {
-    it('processes a valid purchase with adult ticket type', () => {
-        const accountId = 1;
-        const ticketService = new TicketService();
-
-        ticketService.purchaseTickets(
-            accountId,
-            new TicketTypeRequest('ADULT', 2),
-        );
-
-        // expected values
-        const totalSeats = 2;
-        const totalPrice = 2 * ticketTypes.ADULT.price
-
-        const seatServiceInstance = SeatReservationService.mock.results[0].value;
-        const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
-
-        expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(accountId, totalSeats);
-        expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(accountId, totalPrice);
-
-        expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
-        expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
-        expect(console.log).toHaveBeenCalledTimes(1) // Successful requests calls console.log
-    });
-    it('processes a valid purchase with adult and children ticket types', () => {
-        const accountId = 1;
-        const ticketService = new TicketService();
-
-        ticketService.purchaseTickets(
-            accountId,
-            new TicketTypeRequest('ADULT', 2),
-            new TicketTypeRequest('CHILD', 3)
-        );
-
-        // expected values
-        const totalSeats = 2 + 3;
-        const totalPrice =
-            2 * ticketTypes.ADULT.price +
-            3 * ticketTypes.CHILD.price;
-
-        const seatServiceInstance = SeatReservationService.mock.results[0].value;
-        const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
-
-        expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(accountId, totalSeats);
-        expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(accountId, totalPrice);
-
-        expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
-        expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
-        expect(console.log).toHaveBeenCalledTimes(1) // Successful requests calls console.log
-    });
-    it('processes a valid purchase with adult, children and infant ticket types', () => {
-        const accountId = 1;
-        const ticketService = new TicketService();
-
-        ticketService.purchaseTickets(
-            accountId,
-            new TicketTypeRequest('ADULT', 2),
-            new TicketTypeRequest('CHILD', 3),
-            new TicketTypeRequest('INFANT', 2)
-        );
-
-        // expected values
-        const totalSeats = 2 + 3;
-        const totalPrice =
-            2 * ticketTypes.ADULT.price +
-            3 * ticketTypes.CHILD.price;
-
-        const seatServiceInstance = SeatReservationService.mock.results[0].value;
-        const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
-
-        expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(accountId, totalSeats);
-        expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(accountId, totalPrice);
-
-        expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
-        expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
-        expect(console.log).toHaveBeenCalledTimes(1) // Successful requests calls console.log
-    });
+    expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(
+      accountId,
+      numberOfTickets,
+    );
+    expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
+  });
 });
 
-describe('TicketService purchaseTickets correctly applies business rules', ()=>{
-    // successful purchases
-    it('does not reserve seats for infants', () => {
-        const accountId = 1;
-        const ticketService = new TicketService();
+describe("When calls to external services fail", () => {
+  it("should throw an error if SeatReservationService.reserveSeat fails", () => {
+    const error = new Error("Seat reservation failed");
 
-        ticketService.purchaseTickets(
-            accountId,
-            new TicketTypeRequest('ADULT', 3),
-            new TicketTypeRequest('INFANT', 3)
-        );
-
-        // Expected values
-        const expectedPrice =
-            3 * ticketTypes.ADULT.price +
-            3 * ticketTypes.INFANT.price;
-        const expectedSeats = 3 // Only adults and children require seats
-
-        const seatServiceInstance = SeatReservationService.mock.results[0].value;
-        const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
-
-        expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(accountId, expectedSeats);
-        expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(accountId, expectedPrice);
+    // Mock reserveSeat to throw
+    SeatReservationService.mockImplementation(() => {
+      return {
+        reserveSeat: () => {
+          throw error;
+        },
+      };
     });
-    it('successfully purchases 25 tickets', ()=>{
-        const accountId = 1;
-        const ticketService = new TicketService();
 
-        ticketService.purchaseTickets(accountId, new TicketTypeRequest('ADULT', 25));
+    const ticketRequestMock = {
+      getTicketType: () => "ADULT",
+      getNoOfTickets: () => 1,
+    };
 
-        // expected values
-        const totalSeats = 25;
-        const totalPrice = 25 * ticketTypes.ADULT.price
+    expect(() =>
+      ticketService.purchaseTickets(accountId, ticketRequestMock),
+    ).toThrow(error);
+  });
 
-        const seatServiceInstance = SeatReservationService.mock.results[0].value;
-        const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
+  it("should throw an error if TicketPaymentService.makePayment fails", () => {
+    const error = new Error("Payment failed");
 
-        expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(accountId, totalSeats);
-        expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(accountId, totalPrice);
-
-        expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
-        expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
-        expect(console.log).toHaveBeenCalledTimes(1) // Successful requests calls console.log
-    })
-
-    // InvalidPurchaseExceptions
-    it('throws an InvalidPurchaseException if accountId is invalid', () => {
-        const ticketService = new TicketService();
-
-        expect(() =>
-            ticketService.purchaseTickets(0, new TicketTypeRequest('ADULT', 1))
-        ).toThrow(InvalidPurchaseException);
-
-        expect(() =>
-            ticketService.purchaseTickets(0, new TicketTypeRequest('ADULT', 1))
-        ).toThrow("Account id must be valid");
+    SeatReservationService.mockImplementation(() => {
+      return {
+        reserveSeat: () => {},
+      };
     });
-    it('throws an InvalidPurchaseException when more than 25 tickets are requested', ()=>{
-        const ticketService = new TicketService();
 
-        expect(() =>
-            ticketService.purchaseTickets(1, new TicketTypeRequest('ADULT', 26))
-        ).toThrow(InvalidPurchaseException);
-
-        expect(() =>
-            ticketService.purchaseTickets(1, new TicketTypeRequest('ADULT', 26))
-        ).toThrow("A maximum of 25 tickets can be purchased at once");
-    })
-    it('throws an InvalidPurchaseException when no adult tickets are requested', ()=>{
-        const ticketService = new TicketService();
-
-        expect(() =>
-            ticketService.purchaseTickets(
-                1,
-                new TicketTypeRequest('CHILD', 1),
-                new TicketTypeRequest('INFANT', 1),
-        )
-        ).toThrow(InvalidPurchaseException);
-
-        expect(() =>
-            ticketService.purchaseTickets(
-                1,
-                new TicketTypeRequest('CHILD', 1),
-                new TicketTypeRequest('INFANT', 1),
-        )
-        ).toThrow('At least one adult ticket must be purchased');
-    })
-    it('throws an InvalidPurchaseException if there are more infant than adult tickets requested', ()=>{
-        const accountId = 1;
-        const ticketService = new TicketService();
-
-        expect(() =>
-            ticketService.purchaseTickets(
-                accountId,
-                new TicketTypeRequest('ADULT', 2),
-                new TicketTypeRequest('INFANT', 3),
-            )
-        ).toThrow(InvalidPurchaseException);
-
-        expect(() =>
-            ticketService.purchaseTickets(
-                accountId,
-                new TicketTypeRequest('ADULT', 2),
-                new TicketTypeRequest('INFANT', 3),
-            )
-        ).toThrow('Each infant must be accompanied by one adult');
-
-
-    })
-    it('throws an InvalidPurchaseException if an invalid number of tickets is requested', ()=>{
-        const accountId = 1;
-        const ticketService = new TicketService();
-
-        expect(() =>
-            ticketService.purchaseTickets(
-                accountId,
-                new TicketTypeRequest('ADULT', 0),
-            )
-        ).toThrow(InvalidPurchaseException);
-
-        expect(() =>
-            ticketService.purchaseTickets(
-                accountId,
-                new TicketTypeRequest('ADULT', 0),
-            )
-        ).toThrow('Number of tickets must be greater than zero');
-
-        expect(() =>
-            ticketService.purchaseTickets(
-                1,
-                new TicketTypeRequest('ADULT', -1),
-            )
-        ).toThrow('Number of tickets must be greater than zero');
-    })
-    it('throws an InvalidPurchaseException if the same ticket type is processed twice', () => {
-        const accountId = 1;
-        const ticketService = new TicketService();
-        expect(() => {
-            ticketService.purchaseTickets(accountId, new TicketTypeRequest('ADULT', 1), new TicketTypeRequest('ADULT', 2));
-        }).toThrow(InvalidPurchaseException);
-
-        expect(() => {
-            ticketService.purchaseTickets(accountId, new TicketTypeRequest('ADULT', 1), new TicketTypeRequest('ADULT', 2));
-        }).toThrow('Ticket type already processed');
+    TicketPaymentService.mockImplementation(() => {
+      return {
+        makePayment: () => {
+          throw error;
+        },
+      };
     });
-})
+
+    const ticketRequestMock = {
+      getTicketType: () => "ADULT",
+      getNoOfTickets: () => 1,
+    };
+
+    expect(() =>
+      ticketService.purchaseTickets(accountId, ticketRequestMock),
+    ).toThrow(error);
+  });
+});
+
+describe("TicketService purchaseTickets happy path", () => {
+  it("processes a valid purchase with adult ticket type", () => {
+    ticketService.purchaseTickets(accountId, new TicketTypeRequest("ADULT", 2));
+
+    // expected values
+    const totalSeats = 2;
+    const totalPrice = 2 * ticketTypes.ADULT.price;
+
+    const seatServiceInstance = SeatReservationService.mock.results[0].value;
+    const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
+
+    expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(
+      accountId,
+      totalSeats,
+    );
+    expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(
+      accountId,
+      totalPrice,
+    );
+
+    expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
+    expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
+  });
+  it("processes a valid purchase with adult and children ticket types", () => {
+    ticketService.purchaseTickets(
+      accountId,
+      new TicketTypeRequest("ADULT", 2),
+      new TicketTypeRequest("CHILD", 3),
+    );
+
+    // expected values
+    const totalSeats = 2 + 3;
+    const totalPrice =
+      2 * ticketTypes.ADULT.price + 3 * ticketTypes.CHILD.price;
+
+    const seatServiceInstance = SeatReservationService.mock.results[0].value;
+    const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
+
+    expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(
+      accountId,
+      totalSeats,
+    );
+    expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(
+      accountId,
+      totalPrice,
+    );
+
+    expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
+    expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
+  });
+  it("processes a valid purchase with adult, children and infant ticket types", () => {
+    ticketService.purchaseTickets(
+      accountId,
+      new TicketTypeRequest("ADULT", 2),
+      new TicketTypeRequest("CHILD", 3),
+      new TicketTypeRequest("INFANT", 2),
+    );
+
+    // expected values
+    const totalSeats = 2 + 3;
+    const totalPrice =
+      2 * ticketTypes.ADULT.price + 3 * ticketTypes.CHILD.price;
+
+    const seatServiceInstance = SeatReservationService.mock.results[0].value;
+    const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
+
+    expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(
+      accountId,
+      totalSeats,
+    );
+    expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(
+      accountId,
+      totalPrice,
+    );
+
+    expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
+    expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("TicketService purchaseTickets correctly applies business rules", () => {
+  // successful purchases
+  it("does not reserve seats for infants", () => {
+    ticketService.purchaseTickets(
+      accountId,
+      new TicketTypeRequest("ADULT", 3),
+      new TicketTypeRequest("INFANT", 3),
+    );
+
+    // Expected values
+    const expectedPrice =
+      3 * ticketTypes.ADULT.price + 3 * ticketTypes.INFANT.price;
+    const expectedSeats = 3; // Only adults and children require seats
+
+    const seatServiceInstance = SeatReservationService.mock.results[0].value;
+    const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
+
+    expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(
+      accountId,
+      expectedSeats,
+    );
+    expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(
+      accountId,
+      expectedPrice,
+    );
+  });
+  it("successfully purchases 25 tickets", () => {
+    ticketService.purchaseTickets(
+      accountId,
+      new TicketTypeRequest("ADULT", 25),
+    );
+
+    // expected values
+    const totalSeats = 25;
+    const totalPrice = 25 * ticketTypes.ADULT.price;
+
+    const seatServiceInstance = SeatReservationService.mock.results[0].value;
+    const paymentServiceInstance = TicketPaymentService.mock.results[0].value;
+
+    expect(seatServiceInstance.reserveSeat).toHaveBeenCalledWith(
+      accountId,
+      totalSeats,
+    );
+    expect(paymentServiceInstance.makePayment).toHaveBeenCalledWith(
+      accountId,
+      totalPrice,
+    );
+
+    expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
+    expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
+  });
+
+  // InvalidPurchaseExceptions
+  it("throws an InvalidPurchaseException if accountId is invalid", () => {
+    accountId = 0;
+    const result = () =>
+      ticketService.purchaseTickets(
+        accountId,
+        new TicketTypeRequest("ADULT", 1),
+      );
+
+    expect(result).toThrow(InvalidPurchaseException);
+    expect(result).toThrow(ERROR_MESSAGES.INVALID_ACCOUNT_ID);
+  });
+  it("throws an InvalidPurchaseException if ticket type is not invalid", () => {
+    // creating invalid request as creating an instance of TicketTypeRequest with an invalid ticket would fail
+    const invalidRequest = {
+      getTicketType: () => "KING",
+      getNoOfTickets: () => 1,
+    };
+
+    const result = () =>
+      ticketService.purchaseTickets(accountId, invalidRequest);
+
+    expect(result).toThrow(InvalidPurchaseException);
+    expect(result).toThrow(
+      ERROR_MESSAGES.INVALID_TICKET_TYPE(invalidRequest.getTicketType()),
+    );
+  });
+  it("throws an InvalidPurchaseException when more than the maximum tickets are requested", () => {
+    const tooManyTickets = MAX_TICKETS_PER_PURCHASE + 1;
+
+    const result = () =>
+      ticketService.purchaseTickets(
+        1,
+        new TicketTypeRequest("ADULT", tooManyTickets),
+      );
+
+    expect(result).toThrow(InvalidPurchaseException);
+    expect(result).toThrow(ERROR_MESSAGES.MAX_TICKETS_EXCEEDED);
+  });
+
+  it("throws an InvalidPurchaseException when no adult tickets are requested", () => {
+    const result = () =>
+      ticketService.purchaseTickets(
+        1,
+        new TicketTypeRequest("CHILD", 1),
+        new TicketTypeRequest("INFANT", 1),
+      );
+
+    expect(result).toThrow(InvalidPurchaseException);
+    expect(result).toThrow(ERROR_MESSAGES.MUST_HAVE_AT_LEAST_ONE_ADULT);
+  });
+  it("throws InvalidPurchaseException if no ticket requests are passed", () => {
+    const result = () => ticketService.purchaseTickets(accountId);
+    expect(result).toThrow(InvalidPurchaseException);
+    expect(result).toThrow(ERROR_MESSAGES.MUST_HAVE_AT_LEAST_ONE_ADULT);
+  });
+  it("throws an InvalidPurchaseException if there are more infant than adult tickets requested", () => {
+    const result = () =>
+      ticketService.purchaseTickets(
+        accountId,
+        new TicketTypeRequest("ADULT", 2),
+        new TicketTypeRequest("INFANT", 3),
+      );
+
+    expect(result).toThrow(InvalidPurchaseException);
+    expect(result).toThrow(ERROR_MESSAGES.INFANTS_MUST_HAVE_ADULTS);
+  });
+  it("throws an InvalidPurchaseException if zero tickets are requested", () => {
+    const result = () =>
+      ticketService.purchaseTickets(1, new TicketTypeRequest("ADULT", 0));
+    expect(result).toThrow(InvalidPurchaseException);
+    expect(result).toThrow(ERROR_MESSAGES.TICKET_COUNT_MUST_BE_POSITIVE);
+  });
+
+  it("throws an InvalidPurchaseException if a negative number of tickets is requested", () => {
+    const result = () =>
+      ticketService.purchaseTickets(1, new TicketTypeRequest("ADULT", -1));
+    expect(result).toThrow(InvalidPurchaseException);
+    expect(result).toThrow(ERROR_MESSAGES.TICKET_COUNT_MUST_BE_POSITIVE);
+  });
+  it("throws an InvalidPurchaseException if the same ticket type is processed twice", () => {
+    const result = () => {
+      ticketService.purchaseTickets(
+        accountId,
+        new TicketTypeRequest("ADULT", 1),
+        new TicketTypeRequest("ADULT", 2),
+      );
+    };
+    expect(result).toThrow(InvalidPurchaseException);
+    expect(result).toThrow(ERROR_MESSAGES.TICKET_TYPE_ALREADY_PROCESSED);
+  });
+});

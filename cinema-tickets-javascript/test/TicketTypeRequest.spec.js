@@ -1,21 +1,32 @@
-import {describe, it, expect} from "vitest";
+import { describe, it, expect } from "vitest";
 import TicketTypeRequest from "../src/pairtest/lib/TicketTypeRequest.js";
+import { ERROR_MESSAGES } from "../src/constants/errorMessages.js";
 
-describe('TicketTypeRequest', () => {
-    it('throws a TypeError if number of tickets is not an integer', () => {
-        expect(() => new TicketTypeRequest('ADULT', 'a')).toThrow(TypeError);
-        expect(() => new TicketTypeRequest('ADULT', 'a')).toThrow('noOfTickets must be an integer');
+describe("TicketTypeRequest", () => {
+  it("throws a TypeError if number of tickets input is a string", () => {
+    const result = () => new TicketTypeRequest("ADULT", "a");
+    expect(result).toThrowError(
+      new TypeError(ERROR_MESSAGES.NO_OF_TICKETS_INTEGER),
+    );
+  });
 
-        expect(() => new TicketTypeRequest('ADULT', true)).toThrow(TypeError);
-        expect(() => new TicketTypeRequest('ADULT', true)).toThrow('noOfTickets must be an integer');
-    });
-    it('throws a TypeError if an invalid ticket type is provided', () => {
-        expect(() => new TicketTypeRequest('STUDENT', 3)).toThrow(TypeError);
-        expect(() => new TicketTypeRequest('STUDENT', 3)).toThrow('type must be ADULT, CHILD, or INFANT');
-    });
-    it('constructs a valid TicketTypeRequest instance', () => {
-        const request = new TicketTypeRequest('CHILD', 2);
-        expect(request.getTicketType()).toBe('CHILD');
-        expect(request.getNoOfTickets()).toBe(2);
-    });
+  it("throws a TypeError if number of tickets input is a boolean", () => {
+    const result = () => new TicketTypeRequest("ADULT", true);
+    expect(result).toThrowError(
+      new TypeError(ERROR_MESSAGES.NO_OF_TICKETS_INTEGER),
+    );
+  });
+
+  it("throws a TypeError if an invalid ticket type is provided", () => {
+    const result = () => new TicketTypeRequest("ELDER", 3);
+    expect(result).toThrowError(
+      new TypeError(ERROR_MESSAGES.INVALID_TICKET_TYPES()),
+    );
+  });
+
+  it("constructs a valid TicketTypeRequest instance", () => {
+    const request = new TicketTypeRequest("CHILD", 2);
+    expect(request.getTicketType()).toBe("CHILD");
+    expect(request.getNoOfTickets()).toBe(2);
+  });
 });
