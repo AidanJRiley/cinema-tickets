@@ -144,8 +144,7 @@ export default class TicketService {
   }
 
   #logPurchaseSummary(ticketTypeCounts, totalSeatsRequired, totalPrice) {
-    logger.info("logPurchaseSummary: logging ticket requests summary");
-    logger.info(`Request Summary
+    logger.info(`logPurchaseSummary
       Purchase Successful
       Number of Tickets: ${this.#getTotalTicketCount(ticketTypeCounts)}
       Number of Seats Reserved: ${totalSeatsRequired}
