@@ -3,10 +3,10 @@ import TicketService from "../src/pairtest/TicketService.js";
 import TicketTypeRequest from "../src/pairtest/lib/TicketTypeRequest.js";
 import SeatReservationService from "../src/thirdparty/seatbooking/SeatReservationService.js";
 import TicketPaymentService from "../src/thirdparty/paymentgateway/TicketPaymentService.js";
-import { ticketTypes } from "../src/pairtest/constants/ticketTypes.js";
+import { ticketTypes } from "../src/constants/ticketTypes.js";
 import InvalidPurchaseException from "../src/pairtest/lib/InvalidPurchaseException.js";
-import { MAX_TICKETS_PER_PURCHASE } from "../src/pairtest/constants/rules.js";
-import { ERROR_MESSAGES } from "../src/pairtest/constants/errorMessages.js";
+import { MAX_TICKETS_PER_PURCHASE } from "../src/constants/rules.js";
+import { ERROR_MESSAGES } from "../src/constants/errorMessages.js";
 
 // Mock external services
 vi.mock("../src/thirdparty/paymentgateway/TicketPaymentService.js", () => ({
@@ -144,7 +144,6 @@ describe("TicketService purchaseTickets happy path", () => {
 
     expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
     expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
-    expect(console.log).toHaveBeenCalledTimes(1); // Successful requests calls console.log
   });
   it("processes a valid purchase with adult and children ticket types", () => {
     ticketService.purchaseTickets(
@@ -172,7 +171,6 @@ describe("TicketService purchaseTickets happy path", () => {
 
     expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
     expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
-    expect(console.log).toHaveBeenCalledTimes(1); // Successful requests calls console.log
   });
   it("processes a valid purchase with adult, children and infant ticket types", () => {
     ticketService.purchaseTickets(
@@ -201,7 +199,6 @@ describe("TicketService purchaseTickets happy path", () => {
 
     expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
     expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
-    expect(console.log).toHaveBeenCalledTimes(1); // Successful requests calls console.log
   });
 });
 
@@ -255,7 +252,6 @@ describe("TicketService purchaseTickets correctly applies business rules", () =>
 
     expect(seatServiceInstance.reserveSeat).toHaveBeenCalledTimes(1);
     expect(paymentServiceInstance.makePayment).toHaveBeenCalledTimes(1);
-    expect(console.log).toHaveBeenCalledTimes(1); // Successful requests calls console.log
   });
 
   // InvalidPurchaseExceptions

@@ -1,9 +1,10 @@
 import InvalidPurchaseException from "./lib/InvalidPurchaseException.js";
 import SeatReservationService from "../thirdparty/seatbooking/SeatReservationService.js";
 import TicketPaymentService from "../thirdparty/paymentgateway/TicketPaymentService.js";
-import { ticketTypes } from "./constants/ticketTypes.js";
-import { MAX_TICKETS_PER_PURCHASE } from "./constants/rules.js";
-import { ERROR_MESSAGES } from "./constants/errorMessages.js";
+import { ticketTypes } from "../constants/ticketTypes.js";
+import { MAX_TICKETS_PER_PURCHASE } from "../constants/rules.js";
+import { ERROR_MESSAGES } from "../constants/errorMessages.js";
+import { logger } from "../utils/logger.js";
 
 export default class TicketService {
   /**
@@ -11,6 +12,10 @@ export default class TicketService {
    */
 
   purchaseTickets(accountId, ...ticketTypeRequests) {
+    logger.info(
+      "purchaseTickets: attempting to purchase tickets for account " +
+        accountId,
+    );
     if (!this.#isAccountValid(accountId)) {
       throw new InvalidPurchaseException(ERROR_MESSAGES.INVALID_ACCOUNT_ID);
     }
@@ -26,7 +31,7 @@ export default class TicketService {
       new SeatReservationService().reserveSeat(accountId, totalSeatsRequired);
       new TicketPaymentService().makePayment(accountId, totalPrice);
     } catch (err) {
-      console.error("Failed to complete purchase:", err);
+      logger.error("Failed to complete purchase:", err);
       throw err;
     }
 
@@ -34,10 +39,15 @@ export default class TicketService {
   }
 
   #isAccountValid(accountId) {
-    return Number(accountId) > 0;
+    const isValid = Number(accountId) > 0;
+    logger.debug(
+      `isAccountValid: ${accountId} is ${isValid ? "valid" : "invalid"}`,
+    );
+    return isValid;
   }
 
   #processTicketRequests(ticketRequests) {
+    logger.debug("processTicketRequests: processing ticket requests");
     const processedTicketTypes = new Set();
     const count = this.#getCountFromValidTicketTypes();
 
@@ -71,6 +81,9 @@ export default class TicketService {
   }
 
   #validateBusinessRules(counts) {
+    logger.debug(
+      `validateBusinessRules: validating business rules for ticket requests`,
+    );
     // There must be at least one adult ticket purchased
     if (counts.ADULT < 1) {
       throw new InvalidPurchaseException(
@@ -93,6 +106,9 @@ export default class TicketService {
   }
 
   #getNumberOfSeatsRequired(totalTickets) {
+    logger.debug(
+      `getNumberOfSeatsRequired: calculating total number of seats required`,
+    );
     let seats = 0;
     Object.entries(totalTickets).forEach(([key, value]) => {
       if (ticketTypes[key].seatRequired) seats += value;
@@ -102,10 +118,12 @@ export default class TicketService {
   }
 
   #getTotalTicketCount(counts) {
+    logger.debug(`getTotalTicketCount: getting total tickets for requests`);
     return Object.values(counts).reduce((sum, val) => sum + val, 0);
   }
 
   #getTotalPrice(totalTickets) {
+    logger.debug(`getTotalPrice: calculating the total price`);
     let price = 0;
     Object.keys(totalTickets).forEach((key) => {
       price += totalTickets[key] * ticketTypes[key].price;
@@ -115,6 +133,9 @@ export default class TicketService {
   }
 
   #getCountFromValidTicketTypes() {
+    logger.debug(
+      "getCountFromValidTicketTypes: getting ticket type count for valid tickets",
+    );
     return Object.fromEntries(
       Object.keys(ticketTypes)
         .filter((type) => ticketTypes[type].isValid)
@@ -123,9 +144,11 @@ export default class TicketService {
   }
 
   #logPurchaseSummary(ticketTypeCounts, totalSeatsRequired, totalPrice) {
-    console.log(`Request Summary
-  Number of Tickets: ${this.#getTotalTicketCount(ticketTypeCounts)}
-  Number of Seats Reserved: ${totalSeatsRequired}
-  Total Price: £${totalPrice.toFixed(2)}`);
+    logger.info("logPurchaseSummary: logging ticket requests summary");
+    logger.info(`Request Summary
+      Purchase Successful
+      Number of Tickets: ${this.#getTotalTicketCount(ticketTypeCounts)}
+      Number of Seats Reserved: ${totalSeatsRequired}
+      Total Price: £${totalPrice.toFixed(2)}`);
   }
 }

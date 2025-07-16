@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import TicketTypeRequest from "../src/pairtest/lib/TicketTypeRequest.js";
-import { ERROR_MESSAGES } from "../src/pairtest/constants/errorMessages.js";
+import { ERROR_MESSAGES } from "../src/constants/errorMessages.js";
 
 describe("TicketTypeRequest", () => {
   it("throws a TypeError if number of tickets input is a string", () => {

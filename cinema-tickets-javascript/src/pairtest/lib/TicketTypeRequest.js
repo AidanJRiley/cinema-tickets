@@ -1,7 +1,7 @@
 /**
  * Immutable Object.
  */
-import { getValidTicketTypes } from "../constants/ticketTypes.js";
+import { getValidTicketTypes } from "../../constants/ticketTypes.js";
 
 export default class TicketTypeRequest {
   /* Private fields */

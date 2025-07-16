@@ -2,7 +2,7 @@ import { it, describe, expect } from "vitest";
 import {
   getValidTicketTypes,
   ticketTypes,
-} from "../src/pairtest/constants/ticketTypes.js";
+} from "../src/constants/ticketTypes.js";
 
 describe("ticketTypes price definitions", () => {
   it("provides the correct prices for ADULT, CHILD, and INFANT tickets", () => {
