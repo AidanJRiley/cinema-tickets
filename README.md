@@ -11,6 +11,7 @@ A Node.js service for purchasing cinema tickets, including business rule validat
 - [Constants](#constants)
 - [Testing](#testing)
 - [Logging](#logging)
+- [Linting](#linting)
 
 ---
 ## Requirements
@@ -96,6 +97,15 @@ Check test coverage:
 npm run test:coverage
 ```
 
+Vitest setup and config files
+- config: `vitest.config.js`
+- setup: `vitest.setup.js`
+
+The following methods are mocked in the test setup to prevent too many logs being produced.
+- console.log
+- console.warn
+- console.error
+
 ---
 
 ## Logging
@@ -111,3 +121,10 @@ Example output:
 ```
 
 ---
+## Linting
+
+This project uses ESLint with recommended JavaScript rules.
+
+Config file can be found here: `eslint.config.js`
+
+linting can be run with: `npm run lint`
